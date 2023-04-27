@@ -811,40 +811,6 @@ func TestUseHostHeader(t *testing.T) {
 	}
 }
 
-func TestUseHostHeader2(t *testing.T) {
-	t.Parallel()
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Host != "SomeHost" {
-			http.Error(w, fmt.Sprintf("Expected Host header to be '%q', but got '%q'", "SomeHost", r.Host), http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
-	defer testServer.Close()
-
-	client := &Client{}
-	req := AcquireRequest()
-	defer ReleaseRequest(req)
-	resp := AcquireResponse()
-	defer ReleaseResponse(resp)
-
-	req.SetRequestURI(testServer.URL)
-	req.UseHostHeader = true
-	req.Header.SetHost("SomeHost")
-	if err := client.DoTimeout(req, resp, 1*time.Second); err != nil {
-		t.Fatalf("DoTimeout returned an error '%v'", err)
-	}
-	if resp.StatusCode() != http.StatusOK {
-		t.Fatalf("DoTimeout: %v", resp.body)
-	}
-	if err := client.Do(req, resp); err != nil {
-		t.Fatalf("DoTimeout returned an error '%v'", err)
-	}
-	if resp.StatusCode() != http.StatusOK {
-		t.Fatalf("Do: %q", resp.body)
-	}
-}
-
 func TestUseHostHeaderAfterRelease(t *testing.T) {
 	t.Parallel()
 	req := AcquireRequest()

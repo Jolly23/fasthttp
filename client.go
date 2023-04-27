@@ -13,162 +13,6 @@ import (
 	"time"
 )
 
-// Do performs the given http request and fills the given http response.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// The function doesn't follow redirects. Use Get* for following redirects.
-//
-// Response is ignored if resp is nil.
-//
-// ErrNoFreeConns is returned if all DefaultMaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-func Do(req *Request, resp *Response) error {
-	return defaultClient.Do(req, resp)
-}
-
-// DoTimeout performs the given request and waits for response during
-// the given timeout duration.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// The function doesn't follow redirects. Use Get* for following redirects.
-//
-// Response is ignored if resp is nil.
-//
-// ErrTimeout is returned if the response wasn't returned during
-// the given timeout.
-//
-// ErrNoFreeConns is returned if all DefaultMaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-//
-// Warning: DoTimeout does not terminate the request itself. The request will
-// continue in the background and the response will be discarded.
-// If requests take too long and the connection pool gets filled up please
-// try using a Client and setting a ReadTimeout.
-func DoTimeout(req *Request, resp *Response, timeout time.Duration) error {
-	return defaultClient.DoTimeout(req, resp, timeout)
-}
-
-// DoDeadline performs the given request and waits for response until
-// the given deadline.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// The function doesn't follow redirects. Use Get* for following redirects.
-//
-// Response is ignored if resp is nil.
-//
-// ErrTimeout is returned if the response wasn't returned until
-// the given deadline.
-//
-// ErrNoFreeConns is returned if all DefaultMaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-func DoDeadline(req *Request, resp *Response, deadline time.Time) error {
-	return defaultClient.DoDeadline(req, resp, deadline)
-}
-
-// DoRedirects performs the given http request and fills the given http response,
-// following up to maxRedirectsCount redirects. When the redirect count exceeds
-// maxRedirectsCount, ErrTooManyRedirects is returned.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// Response is ignored if resp is nil.
-//
-// ErrNoFreeConns is returned if all DefaultMaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-func DoRedirects(req *Request, resp *Response, maxRedirectsCount int) error {
-	_, _, err := doRequestFollowRedirects(req, resp, req.URI().String(), maxRedirectsCount, &defaultClient)
-	return err
-}
-
-// Get returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-func Get(dst []byte, url string) (statusCode int, body []byte, err error) {
-	return defaultClient.Get(dst, url)
-}
-
-// GetTimeout returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// ErrTimeout error is returned if url contents couldn't be fetched
-// during the given timeout.
-func GetTimeout(dst []byte, url string, timeout time.Duration) (statusCode int, body []byte, err error) {
-	return defaultClient.GetTimeout(dst, url, timeout)
-}
-
-// GetDeadline returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// ErrTimeout error is returned if url contents couldn't be fetched
-// until the given deadline.
-func GetDeadline(dst []byte, url string, deadline time.Time) (statusCode int, body []byte, err error) {
-	return defaultClient.GetDeadline(dst, url, deadline)
-}
-
-// Post sends POST request to the given url with the given POST arguments.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// Empty POST body is sent if postArgs is nil.
-func Post(dst []byte, url string, postArgs *Args) (statusCode int, body []byte, err error) {
-	return defaultClient.Post(dst, url, postArgs)
-}
-
-var defaultClient Client
-
 // Client implements http client.
 //
 // Copying Client by value is prohibited. Create new instance instead.
@@ -308,147 +152,6 @@ type Client struct {
 	ms         map[string]*HostClient
 	readerPool sync.Pool
 	writerPool sync.Pool
-}
-
-// Get returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-func (c *Client) Get(dst []byte, url string) (statusCode int, body []byte, err error) {
-	return clientGetURL(dst, url, c)
-}
-
-// GetTimeout returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// ErrTimeout error is returned if url contents couldn't be fetched
-// during the given timeout.
-func (c *Client) GetTimeout(dst []byte, url string, timeout time.Duration) (statusCode int, body []byte, err error) {
-	return clientGetURLTimeout(dst, url, timeout, c)
-}
-
-// GetDeadline returns the status code and body of url.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// ErrTimeout error is returned if url contents couldn't be fetched
-// until the given deadline.
-func (c *Client) GetDeadline(dst []byte, url string, deadline time.Time) (statusCode int, body []byte, err error) {
-	return clientGetURLDeadline(dst, url, deadline, c)
-}
-
-// Post sends POST request to the given url with the given POST arguments.
-//
-// The contents of dst will be replaced by the body and returned, if the dst
-// is too small a new slice will be allocated.
-//
-// The function follows redirects. Use Do* for manually handling redirects.
-//
-// Empty POST body is sent if postArgs is nil.
-func (c *Client) Post(dst []byte, url string, postArgs *Args) (statusCode int, body []byte, err error) {
-	return clientPostURL(dst, url, postArgs, c)
-}
-
-// DoTimeout performs the given request and waits for response during
-// the given timeout duration.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// The function doesn't follow redirects. Use Get* for following redirects.
-//
-// Response is ignored if resp is nil.
-//
-// ErrTimeout is returned if the response wasn't returned during
-// the given timeout.
-// Immediately returns ErrTimeout if timeout value is negative.
-//
-// ErrNoFreeConns is returned if all Client.MaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-//
-// Warning: DoTimeout does not terminate the request itself. The request will
-// continue in the background and the response will be discarded.
-// If requests take too long and the connection pool gets filled up please
-// try setting a ReadTimeout.
-func (c *Client) DoTimeout(req *Request, resp *Response, timeout time.Duration) error {
-	req.timeout = timeout
-	if req.timeout < 0 {
-		return ErrTimeout
-	}
-	return c.Do(req, resp)
-}
-
-// DoDeadline performs the given request and waits for response until
-// the given deadline.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// The function doesn't follow redirects. Use Get* for following redirects.
-//
-// Response is ignored if resp is nil.
-//
-// ErrTimeout is returned if the response wasn't returned until
-// the given deadline.
-// Immediately returns ErrTimeout if the deadline has already been reached.
-//
-// ErrNoFreeConns is returned if all Client.MaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-func (c *Client) DoDeadline(req *Request, resp *Response, deadline time.Time) error {
-	req.timeout = time.Until(deadline)
-	if req.timeout < 0 {
-		return ErrTimeout
-	}
-	return c.Do(req, resp)
-}
-
-// DoRedirects performs the given http request and fills the given http response,
-// following up to maxRedirectsCount redirects. When the redirect count exceeds
-// maxRedirectsCount, ErrTooManyRedirects is returned.
-//
-// Request must contain at least non-zero RequestURI with full url (including
-// scheme and host) or non-zero Host header + RequestURI.
-//
-// Client determines the server to be requested in the following order:
-//
-//   - from RequestURI if it contains full url with scheme and host;
-//   - from Host header otherwise.
-//
-// Response is ignored if resp is nil.
-//
-// ErrNoFreeConns is returned if all DefaultMaxConnsPerHost connections
-// to the requested host are busy.
-//
-// It is recommended obtaining req and resp via AcquireRequest
-// and AcquireResponse in performance-critical code.
-func (c *Client) DoRedirects(req *Request, resp *Response, maxRedirectsCount int) error {
-	_, _, err := doRequestFollowRedirects(req, resp, req.URI().String(), maxRedirectsCount, c)
-	return err
 }
 
 // Do performs the given http request and fills the given http response.
@@ -599,18 +302,6 @@ func (c *Client) mCleaner(m map[string]*HostClient) {
 		}
 	}
 }
-
-// DefaultMaxConnsPerHost is the maximum number of concurrent connections
-// http client may establish per host by default (i.e. if
-// Client.MaxConnsPerHost isn't set).
-const DefaultMaxConnsPerHost = 512
-
-// DefaultMaxIdleConnDuration is the default duration before idle keep-alive
-// connection is closed.
-const DefaultMaxIdleConnDuration = 10 * time.Second
-
-// DefaultMaxIdemponentCallAttempts is the default idempotent calls attempts count.
-const DefaultMaxIdemponentCallAttempts = 5
 
 // DialFunc must establish connection to addr.
 //
@@ -1243,7 +934,7 @@ func (c *HostClient) Do(req *Request, resp *Response) error {
 	var retry bool
 	maxAttempts := c.MaxIdemponentCallAttempts
 	if maxAttempts <= 0 {
-		maxAttempts = DefaultMaxIdemponentCallAttempts
+		maxAttempts = 5
 	}
 	isRequestRetryable := isIdempotent
 	if c.RetryIf != nil {
@@ -1533,7 +1224,7 @@ func (c *HostClient) acquireConn(reqTimeout time.Duration, connectionClose bool)
 	if n == 0 {
 		maxConns := c.MaxConns
 		if maxConns <= 0 {
-			maxConns = DefaultMaxConnsPerHost
+			maxConns = 512
 		}
 		if c.connsCount < maxConns {
 			c.connsCount++
@@ -1672,7 +1363,7 @@ func (c *HostClient) connsCleaner() {
 		maxIdleConnDuration = c.MaxIdleConnDuration
 	)
 	if maxIdleConnDuration <= 0 {
-		maxIdleConnDuration = DefaultMaxIdleConnDuration
+		maxIdleConnDuration = 10 * time.Second
 	}
 	for {
 		currentTime := time.Now()
@@ -2756,7 +2447,7 @@ func (c *pipelineConnClient) writer(conn net.Conn, stopCh <-chan struct{}) error
 
 	maxIdleConnDuration := c.MaxIdleConnDuration
 	if maxIdleConnDuration <= 0 {
-		maxIdleConnDuration = DefaultMaxIdleConnDuration
+		maxIdleConnDuration = 10 * time.Second
 	}
 	maxBatchDelay := c.MaxBatchDelay
 
